@@ -1,8 +1,6 @@
 import "./fonts/ys-display/fonts.css";
 import "./style.css";
 
-import { data as sourceData } from "./data/dataset_1.js";
-
 import { initData } from "./data.js";
 import { processFormData } from "./lib/utils.js";
 
@@ -10,7 +8,7 @@ import { initTable } from "./components/table.js";
 // @todo: подключение
 
 // Исходные данные используемые в render()
-const api = initData(sourceData);
+const api = initData();
 
 /**
  * Сбор и обработка полей из таблицы
@@ -33,6 +31,21 @@ function collectState() {
  * Перерисовка состояния таблицы при любых изменениях
  * @param {HTMLButtonElement?} action
  */
+async function render(action) {
+  let state = collectState(); // состояние полей из таблицы
+  let query = {}; // здесь будут формироваться параметры запроса
+  // другие apply*
+  query = applySearching(query, state, action);
+  query = applyFiltering(query, state, action);
+  query = applySorting(query, state, action);
+
+  query = applyPagination(query, state, action); // обновляем query
+
+  const { total, items } = await api.getRecords(query); // запрашиваем данные с собранными параметрами
+
+  updatePagination(total, query); // перерисовываем пагинатор
+  sampleTable.render(items);
+}
 
 const sampleTable = initTable(
   {
@@ -60,28 +73,9 @@ const { applyPagination, updatePagination } = initPagination(
   },
 );
 
-async function render(action) {
-  let state = collectState(); // состояние полей из таблицы
-  let query = {}; // здесь будут формироваться параметры запроса
-  // другие apply*
-  query = applySearching(query, state, action);
-  query = applyFiltering(query, state, action);
-  query = applySorting(query, state, action);
-
-  console.log("applyPagination before use:", applyPagination); // И этот лог перед использованием applyPagination
-  query = applyPagination(query, state, action); // обновляем query
-
-  const { total, items } = await api.getRecords(query); // запрашиваем данные с собранными параметрами
-
-  updatePagination(total, query); // перерисовываем пагинатор
-  sampleTable.render(items);
-}
-
 import { initSearching } from "./components/searching.js";
 
-const applySearching = initSearching(sampleTable.search.elements, {
-  searchField: "searchInput", // Имя поля, по которому будет производиться поиск
-});
+const applySearching = initSearching("search");
 
 import { initFiltering } from "./components/filtering.js";
 
